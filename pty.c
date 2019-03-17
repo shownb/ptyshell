@@ -106,6 +106,7 @@ int main(int argc, char* argv[])
 		return 0;
 	
 	//setup handler for SIGCHLD
+	//SIGCHLD就是内核在任何一个进程终止时发送给父进程的一个信号。
 	signal(SIGCHLD, sig_child);
 	
 	//fork and open pty
